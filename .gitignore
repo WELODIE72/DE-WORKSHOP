@@ -163,3 +163,7 @@ cython_debug/
 google-cloud-sdk
 keys
 .DS_Store
+01-docker-terraform/1_terraform_gcp/.terraform.lock.hcl
+01-docker-terraform/1_terraform_gcp/terraform.tfstate
+01-docker-terraform/1_terraform_gcp/terraform.tfstate.backup
+ny_taxi_postgres_data/
