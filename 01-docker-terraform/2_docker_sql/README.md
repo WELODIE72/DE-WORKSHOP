@@ -175,24 +175,34 @@ Right-click Servers in the sidebar and choose Create > Server.
 Create a network
 
 ```bash
-docker network create pg-network
+➜  docker network create pg-network
 ```
 
-Run Postgres (change the path)
+List Docker networks
+```bash
+✗ docker network ls
+NETWORK ID     NAME         DRIVER    SCOPE
+8ca5765106bd   bridge       bridge    local
+b08aca3a6781   host         host      local
+c8479b3c4219   none         null      local
+5867305035cb   pg-network   bridge    local
+```
 
+Run Postgres within the network
+  
 ```bash
 docker run -it \
   -e POSTGRES_USER="root" \
   -e POSTGRES_PASSWORD="root" \
   -e POSTGRES_DB="ny_taxi" \
-  -v c:/Users/alexe/git/data-engineering-zoomcamp/week_1_basics_n_setup/2_docker_sql/ny_taxi_postgres_data:/var/lib/postgresql/data \
+  -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
   -p 5432:5432 \
   --network=pg-network \
   --name pg-database \
   postgres:13
 ```
 
-Run pgAdmin
+Run pgAdmin within the network
 
 ```bash
 docker run -it \
@@ -211,7 +221,7 @@ Running locally
 
 ```bash
 URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz"
-
+export URL
 python ingest_data.py \
   --user=root \
   --password=root \
@@ -222,29 +232,70 @@ python ingest_data.py \
   --url=${URL}
 ```
 
-Build the image
+You should get 
+
+```bash
+Resolving github.com (github.com)... 20.26.156.215
+Connecting to github.com (github.com)|20.26.156.215|:443... connected.
+HTTP request sent, awaiting response... 302 Found
+Location: https://objects.githubusercontent.com/github-production-release-asset-2e65be/513814948/f6895842-79e6-4a43-9458-e5b0b454a340?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20241016%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20241016T153610Z&X-Amz-Expires=300&X-Amz-Signature=42a8f7156460e37c98371098a4b192c1689b079b914ee53d8595c75ea7038aec&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dyellow_tripdata_2021-01.csv.gz&response-content-type=application%2Foctet-stream [following]
+--2024-10-16 16:36:10--  https://objects.githubusercontent.com/github-production-release-asset-2e65be/513814948/f6895842-79e6-4a43-9458-e5b0b454a340?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20241016%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20241016T153610Z&X-Amz-Expires=300&X-Amz-Signature=42a8f7156460e37c98371098a4b192c1689b079b914ee53d8595c75ea7038aec&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dyellow_tripdata_2021-01.csv.gz&response-content-type=application%2Foctet-stream
+Resolving objects.githubusercontent.com (objects.githubusercontent.com)... 185.199.110.133, 185.199.109.133, 185.199.108.133, ...
+Connecting to objects.githubusercontent.com (objects.githubusercontent.com)|185.199.110.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 25031880 (24M) [application/octet-stream]
+Saving to: ‘output.csv.gz’
+
+output.csv.gz                       100%[=================================================================>]  23.87M  34.1MB/s    in 0.7s    
+
+2024-10-16 16:36:11 (34.1 MB/s) - ‘output.csv.gz’ saved [25031880/25031880]
+
+inserted another chunk, took 5.226 second
+inserted another chunk, took 5.256 second
+inserted another chunk, took 5.997 second
+/Users/mbikinaserge/Workspace/training/data-engineering-workshop/01-docker-terraform/2_docker_sql/ingest_data.py:49: DtypeWarning: Columns (6) have mixed types. Specify dtype option on import or set low_memory=False.
+  df = next(df_iter)
+inserted another chunk, took 6.130 second
+inserted another chunk, took 3.934 second
+Finished ingesting data into the postgres database
+```
+
+
+Build the data ingestion script as an image
 
 ```bash
 docker build -t taxi_ingest:v001 .
 ```
 
-On Linux you may have a problem building it:
 
+```bash
+✗ docker build -t taxi_ingest:v001 .
+[+] Building 34.2s (11/11) FINISHED                                                                                      docker:desktop-linux
+ => [internal] load build definition from Dockerfile                                                                                     0.0s
+ => => transferring dockerfile: 218B                                                                                                     0.0s
+ => [internal] load metadata for docker.io/library/python:3.9.1                                                                          1.7s
+ => [auth] library/python:pull token for registry-1.docker.io                                                                            0.0s
+ => [internal] load .dockerignore                                                                                                        0.0s
+ => => transferring context: 2B                                                                                                          0.0s
+ => [1/5] FROM docker.io/library/python:3.9.1@sha256:ca8bd3c91af8b12c2d042ade99f7c8f578a9f80a0dbbd12ed261eeba96dd632f                   17.7s
+ => => resolve docker.io/library/python:3.9.1@sha256:ca8bd3c91af8b12c2d042ade99f7c8f578a9f80a0dbbd12ed261eeba96dd632f                    0.0s
+ => => sha256:3cb0ab4a815457fb78fb84a41c66981420aaee5d06726859b77d250b65c1e990 2.22kB / 2.22kB                                           0.0s
+...
+ => => extracting sha256:7c492206888c962a8cd02d08cdbdc962f2a10b7e2373d1aca6ac94a817ca309c                                                0.0s
+ => => extracting sha256:32ebfb02ddcff9e4c8d2b993f909b47b7141ba9fb8aa2719d96e6279e865f713                                                0.1s
+ => [internal] load build context                                                                                                        0.0s
+ => => transferring context: 2.46kB                                                                                                      0.0s
+ => [2/5] RUN apt-get install wget                                                                                                       1.2s
+ => [3/5] RUN pip install pandas sqlalchemy psycopg2                                                                                    13.0s 
+ => [4/5] WORKDIR /app                                                                                                                   0.0s 
+ => [5/5] COPY ingest_data.py ingest_data.py                                                                                             0.0s 
+ => exporting to image                                                                                                                   0.5s 
+ => => exporting layers                                                                                                                  0.5s 
+ => => writing image sha256:d4f4a75239c293ba1beb76b3cacb78c1aa555bbffab6b209057d7d59865e3ead                                             0.0s 
+ => => naming to docker.io/library/taxi_ingest:v001    
 ```
-error checking context: 'can't stat '/home/name/data_engineering/ny_taxi_postgres_data''.
-```
 
-You can solve it with `.dockerignore`:
-
-* Create a folder `data`
-* Move `ny_taxi_postgres_data` to `data` (you might need to use `sudo` for that)
-* Map `-v $(pwd)/data/ny_taxi_postgres_data:/var/lib/postgresql/data`
-* Create a file `.dockerignore` and add `data` there
-* Check [this video](https://www.youtube.com/watch?v=tOr4hTsHOzU&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb) (the middle) for more details 
-
-
-
-Run the script with Docker
+Run data ingestion script image with Docker
 
 ```bash
 URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz"
@@ -263,7 +314,7 @@ docker run -it \
 
 ### Docker-Compose 
 
-Run it:
+To run the all infrastructure with Docker compose :
 
 ```bash
 docker-compose up
@@ -298,7 +349,3 @@ services:
     ...
 ```
 
-
-### SQL 
-
-Coming soon!
